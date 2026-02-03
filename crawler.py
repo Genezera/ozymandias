@@ -963,7 +963,7 @@ def search_engine(name, engine_config, term, proxies):
 def enrich_results(results, proxies, max_fetch=ENRICH_FETCH_LIMIT):
     visited = set()
     fetched = 0
-    tasks = []
+    futures = []
     def worker(r):
         url = r.get('URL')
         if not isinstance(url, str) or '.onion' not in url:
@@ -980,9 +980,9 @@ def enrich_results(results, proxies, max_fetch=ENRICH_FETCH_LIMIT):
         for r in results:
             if fetched >= max_fetch:
                 break
-            ex.submit(worker, r)
+            futures.append(ex.submit(worker, r))
             fetched += 1
-        for fut in as_completed(list(ex._futures)):
+        for fut in as_completed(futures):
             r, resp = fut.result()
             if resp and resp.status_code == 200:
                 soup = BeautifulSoup(resp.text, 'html.parser')
