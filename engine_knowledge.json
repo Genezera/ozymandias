@@ -84,9 +84,9 @@
     "TthSearch": {
       "candidates": {
         "tth4he7kdfmfwq2k7yaj2ggjdva7rdpbch42q6xgoorbabjeklyfbmyd.onion": {
-          "success": 4,
+          "success": 6,
           "fail": 2,
-          "last": "2026-01-28T15:42:59.645454"
+          "last": "2026-01-28T16:00:43.633883"
         }
       }
     },
@@ -94,17 +94,17 @@
       "candidates": {
         "labyrinthkh3uokhu2a5nwi4e6kedmbkxar3w6vgm2ipdb7ms3zdzlad.onion": {
           "success": 0,
-          "fail": 5,
-          "last": "2026-01-28T14:44:26.938701"
+          "fail": 6,
+          "last": "2026-01-28T16:11:16.436234"
         }
       }
     },
     "DeepSearch": {
       "candidates": {
         "dgwq7uzh5ro2f7p34begy4kmxue5gst7lk2spxda63zkrpuegtj4opyd.onion": {
-          "success": 3,
+          "success": 4,
           "fail": 2,
-          "last": "2026-01-28T14:44:56.931261"
+          "last": "2026-01-28T16:11:27.972375"
         }
       }
     }

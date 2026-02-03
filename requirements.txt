@@ -4,7 +4,5 @@ requests
 pysocks
 beautifulsoup4
 termcolor
-colorama
 streamlit
 plotly
-watchdog

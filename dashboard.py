@@ -199,21 +199,23 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("🚀 Execução do Scanner")
     search_term = st.text_input("Termo", placeholder="Ex: passaportes, cpf, holambra")
-    manual_port_str = st.text_input("Porta SOCKS (override)", value=str(tor_port) if tor_port else "")
-    manual_port = int(manual_port_str) if manual_port_str.strip().isdigit() else None
+    manual_port_override = st.checkbox("Definir Porta SOCKS manualmente", value=False, key="override_port")
+    if manual_port_override:
+        manual_port_str = st.text_input("Porta SOCKS (override)", value=str(tor_port) if tor_port else "")
+        manual_port = int(manual_port_str) if manual_port_str.strip().isdigit() else None
+        st.caption("Override manual da Porta SOCKS. Se desmarcado, usa detecção automática.")
+    else:
+        manual_port = None
     threads = st.slider("Threads", min_value=1, max_value=16, value=6)
     auto_discover = st.checkbox("Descobrir novos buscadores automaticamente", value=True)
-    output_md = st.text_input("Arquivo resumo (md)", placeholder="Ex: resumo.md")
-    run_mode = st.radio("Execução (Windows)", ["Console externo", "Background"], index=0 if os.name == 'nt' else 0)
+    run_mode = st.radio("Modo de Execução (Windows)", ["Console externo", "Background"], index=0 if os.name == 'nt' else 0)
     if st.button("Iniciar Scanner", key="btn_start_scanner"):
         if not tor_port and not manual_port:
             st.error("Conecte ao Tor primeiro.")
         elif not search_term:
             st.warning("Digite um termo para buscar.")
         else:
-            if output_md:
-                st.info(f"Resumo será salvo em: {output_md}")
-            ok, err = start_crawler(search_term, tor_port, mode="console" if run_mode == "Console externo" else "background", manual_port=manual_port, threads=threads, output_md=output_md or None, auto_discover=auto_discover)
+            ok, err = start_crawler(search_term, tor_port, mode="console" if run_mode == "Console externo" else "background", manual_port=manual_port, threads=threads, output_md=None, auto_discover=auto_discover)
             if ok:
                 st.success("Scanner iniciado")
             else:
@@ -392,27 +394,6 @@ with tab4:
                 st.success("Relatório removido")
             except Exception as e:
                 st.error(f"Falha: {e}")
-    st.markdown("---")
-    st.subheader("📄 Resumos Markdown")
-    md_files = sorted([f for f in glob.glob("summary_*.md")] + [f for f in glob.glob("*.md") if os.path.basename(f).lower() not in ["readme.md"]])
-    if md_files:
-        selected_md = st.selectbox("Selecione o resumo", md_files, index=len(md_files)-1, key="select_md_summary")
-        try:
-            with open(selected_md, "r", encoding="utf-8", errors="ignore") as f:
-                md_content = f.read()
-            st.code(md_content, language="markdown")
-            with open(selected_md, "rb") as f:
-                st.download_button(label="📥 Exportar resumo (md)", data=f.read(), file_name=os.path.basename(selected_md), mime="text/markdown", key='download-md-btn')
-        except Exception as e:
-            st.error(f"Falha ao carregar resumo: {e}")
-        if st.button("Abrir resumo", key="btn_open_md"):
-            path = os.path.abspath(selected_md)
-            if os.name == 'nt':
-                os.startfile(path)
-            else:
-                opener = shutil.which("xdg-open") or shutil.which("gnome-open")
-                if opener:
-                    subprocess.Popen([opener, path])
 with tab5:
     st.subheader("🧪 Sondagem de Buscadores")
     col_p1, col_p2 = st.columns([2,1])
