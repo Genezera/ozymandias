@@ -1,10 +1,10 @@
-# OZYMANDIAS // DARKWEB OSINT CONSOLE
+# OZYMANDIAS // TOR OSINT CONSOLE
 
 > *"My name is Ozymandias, King of Kings; Look on my Works, ye Mighty, and despair!"*
 
-**Ozymandias** is an advanced OSINT intelligence platform engineered for discovery, collection, enrichment, and analysis across the Onion Network.
+**Ozymandias** is an OSINT research console engineered for discovery, collection, enrichment, and analysis across the Tor (.onion) network.
 
-Operating through multiple search engines and adaptive crawling mechanisms, Ozymandias continuously gathers intelligence, validates endpoints, enriches content, and maintains a persistent knowledge base of responsive services. The entire operation is orchestrated through a real-time HUD interface featuring telemetry, analytics, diagnostics, and consolidated reporting.
+Operating through multiple search engines and adaptive crawling mechanisms, Ozymandias gathers results, validates endpoints, enriches content, and maintains a local knowledge base of responsive services. The operation is orchestrated through a Streamlit HUD interface featuring telemetry, analytics, diagnostics, and reporting.
 
 ---
 
@@ -14,7 +14,7 @@ Operating through multiple search engines and adaptive crawling mechanisms, Ozym
 * Adaptive crawler with resilient extraction mechanisms
 * Automatic `.onion` search engine discovery
 * Endpoint validation through Tor SOCKS proxies
-* Persistent intelligence database (`knowledge.db`)
+* Persistent local knowledge database (`knowledge.db`)
 * Parallel enrichment and relevance ranking
 * Streamlit-powered tactical HUD dashboard
 * Real-time logs and telemetry monitoring
@@ -118,6 +118,12 @@ All intelligence is persisted in the local knowledge base for future operations.
 | `debug_html`   | Raw HTML engine captures              |
 | `summary_*.md` | Search operation reports              |
 
+Default output files:
+
+- `search_results.xlsx` – main Excel report (generated)
+- `knowledge.db` – local SQLite knowledge base (generated)
+- `engine_knowledge.json` – engine learning metadata (generated)
+
 ---
 
 ## 🏗 Architecture
@@ -196,7 +202,7 @@ Generates HTML captures for engine analysis.
 Review operational logs directly from the dashboard or inspect files under:
 
 ```text
-logs/varredura_YYYYmmdd_HHMMSS.log
+logs/scan_YYYYmmdd_HHMMSS.log
 ```
 
 ---

@@ -20,7 +20,7 @@ import sqlite3
 
 SESSIONS = {}
 
-# --- CONFIGURAÇÃO ---
+# --- CONFIG ---
 SEARCH_ENGINES = {
     'Ahmia': {
         'url': 'http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/search/?q={query}'
@@ -95,7 +95,7 @@ def init_logger():
     global LOGGER, LOG_FILE
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     os.makedirs('logs', exist_ok=True)
-    LOG_FILE = os.path.join('logs', f"varredura_{ts}.log")
+    LOG_FILE = os.path.join('logs', f"scan_{ts}.log")
     LOGGER = logging.getLogger("crawler")
     LOGGER.setLevel(logging.DEBUG)
     fh = logging.FileHandler(LOG_FILE, encoding='utf-8')
@@ -346,11 +346,11 @@ def analyze_page_for_term(soup, term):
     except:
         pass
     return {
-        'Ocorrencias': total_occ,
+        'Occurrences': total_occ,
         'Score': score,
-        'Contextos': " | ".join(contexts[:8]),
-        'TituloExtraido': title,
-        'MetaDescExtraida': meta_desc
+        'Contexts': " | ".join(contexts[:8]),
+        'ExtractedTitle': title,
+        'ExtractedMetaDescription': meta_desc
     }
 def extract_onion_links_from_html(html):
     found = set()
@@ -421,38 +421,38 @@ def fetch_url(url, proxies, timeout=60, retries=2):
         try:
             headers = get_headers()
             if LOGGER:
-                LOGGER.debug(f"Requisição: {url} tentativa={attempt+1} timeout={timeout}")
+                LOGGER.debug(f"Request: {url} attempt={attempt + 1} timeout={timeout}")
             session = get_session(proxies)
             resp = session.get(url, headers=headers, timeout=timeout)
             if resp.status_code == 200:
                 if LOGGER:
-                    LOGGER.debug(f"Resposta 200: {url} tamanho={len(resp.text)}")
+                    LOGGER.debug(f"Response 200: {url} size={len(resp.text)}")
                 return resp
             if resp.status_code in (429, 503):
                 delay = random.uniform(3, 7) * (attempt + 1)
                 if LOGGER:
-                    LOGGER.warning(f"Resposta {resp.status_code}: {url} aguardando {delay:.1f}s")
+                    LOGGER.warning(f"Response {resp.status_code}: {url} waiting {delay:.1f}s")
                 time.sleep(delay)
             else:
                 if LOGGER:
-                    LOGGER.error(f"Resposta {resp.status_code}: {url}")
+                    LOGGER.error(f"Response {resp.status_code}: {url}")
                 return None
         except requests.exceptions.Timeout:
             delay = random.uniform(2, 4) * (attempt + 1)
             if LOGGER:
-                LOGGER.warning(f"Timeout: {url} aguardando {delay:.1f}s")
+                LOGGER.warning(f"Timeout: {url} waiting {delay:.1f}s")
             time.sleep(delay)
         except requests.exceptions.ConnectionError:
             delay = random.uniform(2, 4) * (attempt + 1)
             if LOGGER:
-                LOGGER.warning(f"Conexão falhou: {url} aguardando {delay:.1f}s")
+                LOGGER.warning(f"Connection failed: {url} waiting {delay:.1f}s")
             time.sleep(delay)
         attempt += 1
     if LOGGER:
-        LOGGER.error(f"Sem resposta após {retries+1} tentativas: {url}")
+        LOGGER.error(f"No response after {retries + 1} attempts: {url}")
     return None
 def get_tor_port():
-    """Detecta automaticamente a porta do Tor (9150 ou 9050)."""
+    """Auto-detect Tor port (9150 or 9050)."""
     ports = [9150, 9050]
     for port in ports:
         try:
@@ -468,15 +468,15 @@ def get_tor_port():
 
 def check_tor_connection(proxies):
     try:
-        print(colored("[INFO] Verificando conexão com a rede Tor...", "yellow"))
+        print(colored("[INFO] Checking Tor connection...", "yellow"))
         r = requests.get('https://check.torproject.org/api/ip', proxies=proxies, timeout=30)
         if r.status_code == 200:
             data = r.json()
             if data.get('IsTor', False):
-                print(colored(f"[SUCESSO] Conectado ao Tor! IP: {data.get('IP')}", "green"))
+                print(colored(f"[SUCCESS] Connected to Tor. IP: {data.get('IP')}", "green"))
                 return True
             else:
-                print(colored(f"[PERIGO] NÃO conectado ao Tor. IP: {data.get('IP')}", "red", attrs=['bold']))
+                print(colored(f"[WARNING] Not connected to Tor. IP: {data.get('IP')}", "red", attrs=['bold']))
                 return False
     except Exception:
         pass
@@ -484,15 +484,15 @@ def check_tor_connection(proxies):
         test_url = SEARCH_ENGINES['Ahmia']['url'].format(query=urllib.parse.quote_plus("test"))
         r2 = requests.get(test_url, proxies=proxies, timeout=30, headers=get_headers())
         if r2.status_code in (200, 403, 429):
-            print(colored("[INFO] Conexão via SOCKS parece funcional para .onion", "green"))
+            print(colored("[INFO] SOCKS connection looks functional for .onion", "green"))
             return True
     except Exception as e2:
-        print(colored(f"[ERRO] Falha ao verificar conexão Tor: {e2}", "red"))
+        print(colored(f"[ERROR] Failed to validate Tor connection: {e2}", "red"))
         return False
     return False
 
 def parse_generic(soup, term, base_url):
-    """Tenta extrair resultados de qualquer buscador simples."""
+    """Best-effort result extraction for simple engines."""
     results = []
     links = soup.find_all('a')
     for link in links:
@@ -505,11 +505,11 @@ def parse_generic(soup, term, base_url):
             if parent:
                 snippet = parent.get_text(strip=True)[:200]
             results.append({
-                'Termo Pesquisado': term,
-                'Título': title,
+                'Search Term': term,
+                'Title': title,
                 'URL': resolved,
                 'Snippet': snippet,
-                'Data': pd.Timestamp.now()
+                'Date': pd.Timestamp.now()
             })
     return results
 def fetch_external_engine(endpoint, term, proxies):
@@ -527,12 +527,12 @@ def fetch_external_engine(endpoint, term, proxies):
             if resolved and '.onion' in resolved:
                 title = a.get_text(strip=True) or resolved
                 found.append({
-                    'Termo Pesquisado': term,
-                    'Título': title,
+                    'Search Term': term,
+                    'Title': title,
                     'URL': resolved,
                     'Snippet': '',
-                    'Motor de Busca': urllib.parse.urlparse(url).netloc,
-                    'Data': pd.Timestamp.now()
+                    'Search Engine': urllib.parse.urlparse(url).netloc,
+                    'Date': pd.Timestamp.now()
                 })
         try:
             host = urllib.parse.urlparse(url).netloc
@@ -573,17 +573,17 @@ def aggregate_external_engines(term, proxies, max_workers=5):
 def perform_form_search(home_url, term, proxies, engine_name):
     try:
         if LOGGER:
-            LOGGER.info(f"FormFallback start motor='{engine_name}' home='{home_url}'")
+            LOGGER.info(f"FormFallback start engine='{engine_name}' home='{home_url}'")
         resp = fetch_url(home_url, proxies, timeout=60, retries=1)
         if not resp or resp.status_code != 200:
             if LOGGER:
-                LOGGER.warning(f"FormFallback noresp motor='{engine_name}' status='{resp.status_code if resp else 'none'}'")
+                LOGGER.warning(f"FormFallback noresp engine='{engine_name}' status='{resp.status_code if resp else 'none'}'")
             return []
         soup = BeautifulSoup(resp.text, 'html.parser')
         forms = soup.find_all('form')
         if not forms:
             if LOGGER:
-                LOGGER.info(f"FormFallback sem_forms motor='{engine_name}'")
+                LOGGER.info(f"FormFallback no_forms engine='{engine_name}'")
             return []
         target_names = set(['q','query','search','s','term','keyword'])
         chosen = None
@@ -621,22 +621,22 @@ def perform_form_search(home_url, term, proxies, engine_name):
             r = requests.get(submit_url, params=data, headers=headers, proxies=proxies, timeout=60)
         if not r or r.status_code != 200:
             if LOGGER:
-                LOGGER.warning(f"FormFallback submit_fail motor='{engine_name}' url='{submit_url}' status='{r.status_code if r else 'none'}'")
+                LOGGER.warning(f"FormFallback submit_fail engine='{engine_name}' url='{submit_url}' status='{r.status_code if r else 'none'}'")
             return []
         rsoup = BeautifulSoup(r.text, 'html.parser')
         found = parse_generic(rsoup, term, submit_url)
         for x in found:
-            x['Motor de Busca'] = engine_name
+            x['Search Engine'] = engine_name
         if LOGGER:
-            LOGGER.info(f"FormFallback ok motor='{engine_name}' url='{submit_url}' qtd={len(found)}")
+            LOGGER.info(f"FormFallback ok engine='{engine_name}' url='{submit_url}' count={len(found)}")
         return found
     except:
         if LOGGER:
-            LOGGER.exception(f"FormFallback error motor='{engine_name}'")
+            LOGGER.exception(f"FormFallback error engine='{engine_name}'")
         return []
 
 def find_next_page(soup, current_url):
-    """Tenta encontrar o link para a próxima página de resultados."""
+    """Attempt to find the next results page."""
     link = soup.find('link', rel='next')
     if link and link.get('href'):
         return link.get('href')
@@ -761,21 +761,21 @@ def parse_ahmia(soup, term, base_url):
                 continue
             snippet_tag = item.find('p') or item.find('div', class_=re.compile(r'(snippet|desc|text)', re.IGNORECASE))
             results.append({
-                'Termo Pesquisado': term,
-                'Motor de Busca': 'Ahmia',
-                'Título': (link_title or resolved_link),
+                'Search Term': term,
+                'Search Engine': 'Ahmia',
+                'Title': (link_title or resolved_link),
                 'URL': resolved_link,
                 'Snippet': snippet_tag.get_text(strip=True)[:200] if snippet_tag else "",
-                'Data': pd.Timestamp.now()
+                'Date': pd.Timestamp.now()
             })
     else:
         results = parse_generic(soup, term, base_url)
         for r in results:
-            r['Motor de Busca'] = 'Ahmia'
+            r['Search Engine'] = 'Ahmia'
     return results
 
 def search_engine(name, engine_config, term, proxies):
-    """Realiza a busca em um motor específico com paginação automática."""
+    """Search a specific engine with basic pagination support."""
     results = []
     
     knowledge = load_knowledge()
@@ -783,19 +783,19 @@ def search_engine(name, engine_config, term, proxies):
     override = best_candidate_host(knowledge, name)
     current_url = swap_host_in_url(base_url, override) if override else base_url
     
-    # Limite de segurança para evitar loops infinitos
+    # Safety limit to avoid infinite loops
     MAX_PAGES = 1 if name == 'Ahmia' else 3 
     pages_crawled = 0
     
-    print(f"  > Pesquisando '{term}' no {name}...")
+    print(f"  > Searching for '{term}' on {name}...")
     if LOGGER:
-        LOGGER.info(f"Iniciando busca termo='{term}' motor='{name}' url='{current_url}'")
+        LOGGER.info(f"Search start term='{term}' engine='{name}' url='{current_url}'")
     
     while current_url and pages_crawled < MAX_PAGES:
         if pages_crawled > 0:
-            print(f"    >> Buscando página {pages_crawled + 1}...")
+            print(f"    >> Fetching page {pages_crawled + 1}...")
         if LOGGER:
-            LOGGER.info(f"Página {pages_crawled + 1} motor='{name}' url='{current_url}'")
+            LOGGER.info(f"Page {pages_crawled + 1} engine='{name}' url='{current_url}'")
             
         try:
             resp = fetch_url(current_url, proxies, timeout=60, retries=2)
@@ -813,28 +813,28 @@ def search_engine(name, engine_config, term, proxies):
                 if name == 'Ahmia':
                     page_results = parse_ahmia(soup, term, current_url)
                 else:
-                    # Parser Genérico
+                    # Generic parser
                     generic_results = parse_generic(soup, term, current_url)
                     # Adiciona o nome do motor
                     for res in generic_results:
-                        res['Motor de Busca'] = name
+                        res['Search Engine'] = name
                     page_results.extend(generic_results)
                 if pages_crawled == 0 and len(page_results) == 0:
                     try:
                         parsed = urllib.parse.urlparse(current_url)
                         home_url = urllib.parse.urlunparse((parsed.scheme, parsed.netloc, '/', '', '', ''))
-                        print(colored("    [?] Fallback por formulário na página inicial", "yellow"))
+                        print(colored("    [?] Form-based fallback on the homepage", "yellow"))
                         if LOGGER:
-                            LOGGER.info(f"Fallback formulário motor='{name}' home='{home_url}'")
+                            LOGGER.info(f"Form fallback engine='{name}' home='{home_url}'")
                         form_results = perform_form_search(home_url, term, proxies, name)
                         page_results.extend(form_results or [])
                     except:
                         pass
                     
                 results.extend(page_results)
-                print(colored(f"    -> {len(page_results)} resultados nesta página.", "cyan"))
+                print(colored(f"    -> {len(page_results)} results on this page.", "cyan"))
                 if LOGGER:
-                    LOGGER.info(f"Resultados coletados motor='{name}' pagina={pages_crawled + 1} qtd={len(page_results)}")
+                    LOGGER.info(f"Results collected engine='{name}' page={pages_crawled + 1} count={len(page_results)}")
                 
                 try:
                     visited = set()
@@ -846,7 +846,7 @@ def search_engine(name, engine_config, term, proxies):
                             continue
                         visited.add(url)
                         if LOGGER:
-                            LOGGER.debug(f"Analisando termo em url='{url}'")
+                            LOGGER.debug(f"Analyzing term on url='{url}'")
                         page_resp = fetch_url(url, proxies, timeout=45, retries=1)
                         if page_resp and page_resp.status_code == 200:
                             page_soup = BeautifulSoup(page_resp.text, 'html.parser')
@@ -854,7 +854,15 @@ def search_engine(name, engine_config, term, proxies):
                             r.update(analysis)
                             r['Status'] = '200'
                             try:
-                                db_upsert_link(url, r.get('Título') or "", name, term, r.get('Status'), r.get('Score'), r.get('Contextos'))
+                                db_upsert_link(
+                                    url,
+                                    r.get('Title') or "",
+                                    name,
+                                    term,
+                                    r.get('Status'),
+                                    r.get('Score'),
+                                    r.get('Contexts'),
+                                )
                             except:
                                 pass
                             try:
@@ -867,14 +875,14 @@ def search_engine(name, engine_config, term, proxies):
                         else:
                             r['Status'] = str(page_resp.status_code) if page_resp else 'error'
                             try:
-                                db_upsert_link(url, r.get('Título') or "", name, term, r.get('Status'), 0, "")
+                                db_upsert_link(url, r.get('Title') or "", name, term, r.get('Status'), 0, "")
                             except:
                                 pass
                 except Exception as e:
                     if LOGGER:
-                        LOGGER.exception("Falha ao analisar páginas da lista")
+                        LOGGER.exception("Failed to analyze result pages")
                 
-                # Tenta encontrar a próxima página
+                # Try to find the next page
                 if name == 'Torch':
                     next_link = find_next_page_torch(soup, current_url)
                 elif name == 'Ahmia':
@@ -882,25 +890,25 @@ def search_engine(name, engine_config, term, proxies):
                 else:
                     next_link = find_next_page(soup, current_url)
                 if next_link:
-                    # Resolve URL relativa se necessário
+                    # Resolve relative URL if needed
                     current_url = urllib.parse.urljoin(current_url, next_link)
                     pages_crawled += 1
                     
-                    # Pausa aleatória para simular humano e dar tempo de carregar/estabilizar Tor
+                    # Random pause to reduce rate limits and allow Tor circuits to stabilize
                     wait_time = random.uniform(5, 10)
-                    print(colored(f"    ... Aguardando {wait_time:.1f}s para próxima página ...", "yellow"))
+                    print(colored(f"    ... Waiting {wait_time:.1f}s before next page ...", "yellow"))
                     if LOGGER:
-                        LOGGER.info(f"Próxima página motor='{name}' aguardando={wait_time:.1f}s next='{current_url}'")
+                        LOGGER.info(f"Next page engine='{name}' wait={wait_time:.1f}s next='{current_url}'")
                     time.sleep(wait_time)
                 else:
                     if LOGGER:
-                        LOGGER.info(f"Sem próxima página motor='{name}'")
-                    break # Sem mais páginas
+                        LOGGER.info(f"No next page engine='{name}'")
+                    break # No more pages
                     
             else:
-                print(colored(f"    [X] {name} retornou status {resp.status_code if resp else 'sem resposta'}", "red"))
+                print(colored(f"    [X] {name} returned status {resp.status_code if resp else 'no response'}", "red"))
                 if LOGGER:
-                    LOGGER.error(f"Falha resposta motor='{name}' status='{resp.status_code if resp else 'none'}'")
+                    LOGGER.error(f"Engine request failed engine='{name}' status='{resp.status_code if resp else 'none'}'")
                 record_engine_result(knowledge, name, urllib.parse.urlparse(current_url).netloc, False)
                 try:
                     db_upsert_engine(name, urllib.parse.urlparse(current_url).netloc, fail_inc=1)
@@ -909,17 +917,17 @@ def search_engine(name, engine_config, term, proxies):
                 new_host = adapt_engine(name, engine_config, proxies, knowledge)
                 if new_host:
                     current_url = swap_host_in_url(base_url, new_host)
-                    print(colored(f"    [+] Adaptação: usando host {new_host} para {name}", "yellow"))
+                    print(colored(f"    [+] Adaptation: using host {new_host} for {name}", "yellow"))
                     if LOGGER:
-                        LOGGER.info(f"Adaptação motor='{name}' host='{new_host}'")
+                        LOGGER.info(f"Adaptation engine='{name}' host='{new_host}'")
                     time.sleep(random.uniform(3, 6))
                     continue
                 break
                 
         except requests.exceptions.Timeout:
-            print(colored(f"    [X] Timeout ao conectar com {name}", "red"))
+            print(colored(f"    [X] Timeout while connecting to {name}", "red"))
             if LOGGER:
-                LOGGER.error(f"Timeout motor='{name}'")
+                LOGGER.error(f"Timeout engine='{name}'")
             record_engine_result(knowledge, name, urllib.parse.urlparse(current_url).netloc, False)
             try:
                 db_upsert_engine(name, urllib.parse.urlparse(current_url).netloc, fail_inc=1)
@@ -928,16 +936,16 @@ def search_engine(name, engine_config, term, proxies):
             new_host = adapt_engine(name, engine_config, proxies, knowledge)
             if new_host:
                 current_url = swap_host_in_url(base_url, new_host)
-                print(colored(f"    [+] Adaptação: usando host {new_host} para {name}", "yellow"))
+                print(colored(f"    [+] Adaptation: using host {new_host} for {name}", "yellow"))
                 if LOGGER:
-                    LOGGER.info(f"Adaptação motor='{name}' host='{new_host}'")
+                    LOGGER.info(f"Adaptation engine='{name}' host='{new_host}'")
                 time.sleep(random.uniform(3, 6))
                 continue
             break
         except requests.exceptions.ConnectionError:
-            print(colored(f"    [X] Falha de conexão com {name} (Pode estar offline)", "red"))
+            print(colored(f"    [X] Connection failed for {name} (might be offline)", "red"))
             if LOGGER:
-                LOGGER.error(f"Conexão falhou motor='{name}'")
+                LOGGER.error(f"Connection failed engine='{name}'")
             record_engine_result(knowledge, name, urllib.parse.urlparse(current_url).netloc, False)
             try:
                 db_upsert_engine(name, urllib.parse.urlparse(current_url).netloc, fail_inc=1)
@@ -946,16 +954,16 @@ def search_engine(name, engine_config, term, proxies):
             new_host = adapt_engine(name, engine_config, proxies, knowledge)
             if new_host:
                 current_url = swap_host_in_url(base_url, new_host)
-                print(colored(f"    [+] Adaptação: usando host {new_host} para {name}", "yellow"))
+                print(colored(f"    [+] Adaptation: using host {new_host} for {name}", "yellow"))
                 if LOGGER:
-                    LOGGER.info(f"Adaptação motor='{name}' host='{new_host}'")
+                    LOGGER.info(f"Adaptation engine='{name}' host='{new_host}'")
                 time.sleep(random.uniform(3, 6))
                 continue
             break
         except Exception as e:
-            print(colored(f"    [X] Erro inesperado no {name}: {e}", "red"))
+            print(colored(f"    [X] Unexpected error on {name}: {e}", "red"))
             if LOGGER:
-                LOGGER.exception(f"Erro inesperado motor='{name}'")
+                LOGGER.exception(f"Unexpected error engine='{name}'")
             break
         
     return results
@@ -971,7 +979,7 @@ def enrich_results(results, proxies, max_fetch=ENRICH_FETCH_LIMIT):
         if url in visited:
             return r, None
         if LOGGER:
-            LOGGER.debug(f"Enriquecendo url='{url}'")
+            LOGGER.debug(f"Enriching url='{url}'")
         resp = fetch_url(url, proxies, timeout=45, retries=1)
         visited.add(url)
         return r, resp
@@ -990,17 +998,17 @@ def enrich_results(results, proxies, max_fetch=ENRICH_FETCH_LIMIT):
                 meta = soup.find('meta', attrs={'name': 'description'})
                 meta_desc = meta.get('content', '').strip() if meta and meta.get('content') else ""
                 text_snippet = soup.get_text(separator=' ', strip=True)[:500]
-                if not r.get('Título'):
-                    r['Título'] = title if title else r.get('Título', '')
+                if not r.get('Title'):
+                    r['Title'] = title if title else r.get('Title', '')
                 if not r.get('Snippet'):
                     r['Snippet'] = meta_desc if meta_desc else text_snippet
                 r['Status'] = '200'
                 if LOGGER:
-                    LOGGER.debug(f"Enriquecimento OK url='{r.get('URL')}'")
+                    LOGGER.debug(f"Enrichment OK url='{r.get('URL')}'")
             else:
                 r['Status'] = str(resp.status_code) if resp else 'error'
                 if LOGGER:
-                    LOGGER.warning(f"Enriquecimento falhou url='{r.get('URL')}' status='{r['Status']}'")
+                    LOGGER.warning(f"Enrichment failed url='{r.get('URL')}' status='{r['Status']}'")
 
 def build_parser():
     p = argparse.ArgumentParser()
@@ -1016,11 +1024,11 @@ def generate_summary(findings, output_path=None):
     name = output_path or f"summary_{ts}.md"
     try:
         lines = []
-        lines.append(f"# Darkweb Summary {ts}")
+        lines.append(f"# Tor OSINT Summary {ts}")
         if not df.empty:
             lines.append(f"- Total links: {len(df)}")
-            if 'Motor de Busca' in df.columns:
-                counts = df['Motor de Busca'].value_counts()
+            if 'Search Engine' in df.columns:
+                counts = df['Search Engine'].value_counts()
                 for k, v in counts.items():
                     lines.append(f"- {k}: {v}")
         with open(name, "w", encoding="utf-8") as f:
@@ -1028,7 +1036,7 @@ def generate_summary(findings, output_path=None):
     except:
         pass
 def main():
-    print(colored("=== Darkweb Multi-Engine Search Crawler ===", "magenta", attrs=['bold']))
+    print(colored("=== Tor Multi-Engine OSINT Crawler ===", "magenta", attrs=['bold']))
     parser = build_parser()
     args = None
     try:
@@ -1037,7 +1045,7 @@ def main():
         args = argparse.Namespace(query=None, threads=5, output=None, port=None)
     init_logger()
     if LOGGER:
-        LOGGER.info("Início da varredura")
+        LOGGER.info("Scan start")
     init_db()
     
     # 1. Configurar Tor
@@ -1046,35 +1054,35 @@ def main():
         override_port = int(args.port)
     tor_port = override_port or get_tor_port()
     if not tor_port:
-        print(colored("\n[CRÍTICO] O Tor não foi detectado (portas 9150/9050 fechadas).", "red"))
+        print(colored("\n[CRITICAL] Tor was not detected (ports 9150/9050 closed).", "red"))
         if LOGGER:
-            LOGGER.error("Tor não detectado")
+            LOGGER.error("Tor not detected")
         
         if sys.platform.startswith('linux'):
-            print(colored(">>> No Kali Linux, execute: sudo service tor start", "yellow", attrs=['bold']))
+            print(colored(">>> On Kali Linux, run: sudo service tor start", "yellow", attrs=['bold']))
         else:
-            print(colored(">>> Abra o Tor Browser e deixe-o aberto antes de rodar este script.", "yellow", attrs=['bold']))
+            print(colored(">>> Start Tor Browser and keep it open before running this script.", "yellow", attrs=['bold']))
         if LOGGER:
-            LOGGER.info("Encerrando por ausência de Tor")
+            LOGGER.info("Stopping due to missing Tor")
         return
 
-    print(colored(f"[INFO] Tor detectado na porta {tor_port}.", "green"))
+    print(colored(f"[INFO] Tor detected on port {tor_port}.", "green"))
     tor_proxy = f'socks5h://127.0.0.1:{tor_port}'
     proxies = {'http': tor_proxy, 'https': tor_proxy}
     if LOGGER:
-        LOGGER.info(f"Tor detectado porta={tor_port}")
+        LOGGER.info(f"Tor detected port={tor_port}")
 
     if not check_tor_connection(proxies):
-        print(colored("[AVISO] Não foi possível confirmar a conexão Tor. Continuando mesmo assim.", "yellow"))
+        print(colored("[WARN] Could not confirm Tor connection. Continuing anyway.", "yellow"))
         if LOGGER:
-            LOGGER.warning("Verificação Tor falhou, prosseguindo com proxies configurados")
+            LOGGER.warning("Tor verification failed; continuing with configured proxies")
 
-    # 1.1 Descoberta automática de novos buscadores (opcional)
+    # 1.1 Optional: auto-discover new engines
     try:
         if args and getattr(args, "discover", False):
-            print(colored("[INFO] Descobrindo novos buscadores automaticamente...", "cyan"))
+            print(colored("[INFO] Auto-discovering new engines...", "cyan"))
             if LOGGER:
-                LOGGER.info("Iniciando descoberta de buscadores")
+                LOGGER.info("Engine discovery start")
             new_eps = discover_new_engines(proxies)
             if new_eps:
                 added = 0
@@ -1082,18 +1090,18 @@ def main():
                     if ep not in DEFAULT_SEARCH_ENGINES:
                         DEFAULT_SEARCH_ENGINES.append(ep)
                         added += 1
-                print(colored(f"[INFO] {added} novos endpoints adicionados ao agregador.", "green"))
+                print(colored(f"[INFO] Added {added} new endpoints to the aggregator.", "green"))
                 if LOGGER:
-                    LOGGER.info(f"Descoberta adicionou qtd={added}")
+                    LOGGER.info(f"Discovery added count={added}")
             else:
-                print(colored("[INFO] Nenhum novo buscador válido encontrado no momento.", "yellow"))
+                print(colored("[INFO] No new valid engines found right now.", "yellow"))
                 if LOGGER:
-                    LOGGER.info("Descoberta sem resultados")
+                    LOGGER.info("Discovery yielded no results")
     except Exception as e:
         if LOGGER:
-            LOGGER.exception("Falha na descoberta automática")
+            LOGGER.exception("Engine discovery failed")
  
-    # 2. Obter Termo
+    # 2. Get query
     if args and args.query:
         termo_input = args.query
         try:
@@ -1103,101 +1111,110 @@ def main():
         except:
             pass
         terms = [termo_input]
-        print(colored(f"\n[INFO] Buscando por: {termo_input}", "cyan"))
+        print(colored(f"\n[INFO] Searching for: {termo_input}", "cyan"))
         if LOGGER:
-            LOGGER.info(f"Termo recebido via argumento='{termo_input}'")
+            LOGGER.info(f"Query received via args='{termo_input}'")
     else:
-        print(colored("\n--- MODO DE PESQUISA MANUAL ---", "cyan", attrs=['bold']))
-        termo_input = input(colored("Digite o termo que deseja procurar na Darkweb: ", "yellow")).strip()
+        print(colored("\n--- MANUAL SEARCH MODE ---", "cyan", attrs=['bold']))
+        termo_input = input(colored("Enter a search query (legal OSINT only): ", "yellow")).strip()
         
         if not termo_input:
-            print(colored("[!] Nenhum termo inserido. Encerrando.", "red"))
+            print(colored("[!] No query provided. Exiting.", "red"))
             if LOGGER:
-                LOGGER.info("Nenhum termo inserido")
+                LOGGER.info("No query provided")
             return
         terms = [termo_input]
         if LOGGER:
-            LOGGER.info(f"Termo inserido='{termo_input}'")
+            LOGGER.info(f"Query provided='{termo_input}'")
 
     all_findings = []
 
-    # 3. Loop de Busca
+    # 3. Search loop
     for term in terms:
-        print(colored(f"\n[*] Iniciando busca por: {term}", "yellow"))
+        print(colored(f"\n[*] Starting search for: {term}", "yellow"))
         if LOGGER:
-            LOGGER.info(f"Início busca termo='{term}'")
+            LOGGER.info(f"Search start term='{term}'")
         
         for engine_name, config in SEARCH_ENGINES.items():
             findings = search_engine(engine_name, config, str(term), proxies)
             all_findings.extend(findings)
-            # Pausa para não sobrecarregar circuitos e evitar bloqueios
+            # Small delay to avoid hammering circuits and rate limits
             time.sleep(random.uniform(2, 5)) 
             if LOGGER:
-                LOGGER.info(f"Motor concluído='{engine_name}' acumulado={len(all_findings)}")
+                LOGGER.info(f"Engine finished='{engine_name}' total={len(all_findings)}")
         try:
             ext = aggregate_external_engines(str(term), proxies, max_workers=(args.threads if args else 5))
             all_findings.extend(ext)
             if LOGGER:
-                LOGGER.info(f"Agregador externo adicionou qtd={len(ext)}")
+                LOGGER.info(f"External aggregator added count={len(ext)}")
         except:
             if LOGGER:
-                LOGGER.warning("Agregador externo falhou")
+                LOGGER.warning("External aggregator failed")
 
-    # 4. Relatório
+    # 4. Report
     if all_findings:
-        output_file = 'resultados_busca_darkweb.xlsx'
+        output_file = 'search_results.xlsx'
         try:
             target_fetch = ENRICH_FETCH_LIMIT if not args else max(1, args.threads)
             enrich_results(all_findings, proxies, target_fetch)
         except Exception as e:
-            print(colored(f"[AVISO] Enriquecimento falhou: {e}", "yellow"))
+            print(colored(f"[WARN] Enrichment failed: {e}", "yellow"))
             if LOGGER:
-                LOGGER.exception("Falha no enriquecimento")
+                LOGGER.exception("Enrichment failed")
         new_results = pd.DataFrame(all_findings)
         
-        # Carregar resultados existentes se houver
+        # Load existing results if present
         if os.path.exists(output_file):
             try:
                 existing_df = pd.read_excel(output_file)
-                print(colored(f"[INFO] Mesclando com {len(existing_df)} resultados anteriores...", "cyan"))
+                existing_df = existing_df.rename(
+                    columns={
+                        "Data": "Date",
+                        "Termo Pesquisado": "Search Term",
+                        "Motor de Busca": "Search Engine",
+                        "Contextos": "Contexts",
+                        "Título": "Title",
+                        "Titulo": "Title",
+                    },
+                )
+                print(colored(f"[INFO] Merging with {len(existing_df)} previous results...", "cyan"))
                 df_results = pd.concat([existing_df, new_results], ignore_index=True)
                 if LOGGER:
-                    LOGGER.info(f"Mesclagem com resultados anteriores qtd={len(existing_df)}")
+                    LOGGER.info(f"Merged with previous results count={len(existing_df)}")
             except Exception as e:
-                print(colored(f"[AVISO] Não foi possível ler o arquivo existente (será sobrescrito): {e}", "yellow"))
+                print(colored(f"[WARN] Could not read existing file (it will be overwritten): {e}", "yellow"))
                 df_results = new_results
                 if LOGGER:
-                    LOGGER.warning("Falha leitura arquivo existente, sobrescrevendo")
+                    LOGGER.warning("Failed to read existing file; overwriting")
         else:
             df_results = new_results
         
-        # Limpeza e Deduplicação (mantém o mais recente se houver duplicata exata de URL+Termo, ou só URL?)
-        # Vamos dedublicar por URL para não ter o mesmo link repetido várias vezes
+        # Deduplicate by URL so the same link does not repeat across runs
         df_results.drop_duplicates(subset=['URL'], keep='last', inplace=True)
         
         try:
             df_results.to_excel(output_file, index=False)
-            print(colored(f"\n[SUCESSO] Relatório atualizado em: {output_file}", "green", attrs=['bold']))
-            print(f"Total de Links Únicos (Acumulado): {len(df_results)}")
-            print(f"Novos Links nesta rodada: {len(new_results)}")
+            print(colored(f"\n[SUCCESS] Report updated: {output_file}", "green", attrs=['bold']))
+            print(f"Total unique links (all runs): {len(df_results)}")
+            print(f"New links in this run: {len(new_results)}")
             generate_summary(all_findings, args.output if args else None)
             if LOGGER:
-                LOGGER.info(f"Relatório salvo='{output_file}' total={len(df_results)} novos={len(new_results)}")
+                LOGGER.info(f"Report saved='{output_file}' total={len(df_results)} new={len(new_results)}")
         except PermissionError:
-            print(colored(f"\n[ERRO CRÍTICO] Permissão negada ao salvar '{output_file}'.", "red", attrs=['bold']))
-            print(colored(">>> FECHE o arquivo Excel se estiver aberto e tente novamente.", "yellow"))
+            print(colored(f"\n[CRITICAL] Permission denied when saving '{output_file}'.", "red", attrs=['bold']))
+            print(colored(">>> Close the Excel file if it is open and try again.", "yellow"))
             if LOGGER:
-                LOGGER.error("Permissão negada ao salvar relatório")
+                LOGGER.error("Permission denied while saving report")
         except Exception as e:
-            print(colored(f"\n[ERRO] Falha ao salvar o relatório: {e}", "red"))
+            print(colored(f"\n[ERROR] Failed to save report: {e}", "red"))
             if LOGGER:
-                LOGGER.exception("Falha ao salvar relatório")
+                LOGGER.exception("Failed to save report")
     else:
-        print(colored("\n[INFO] Nenhum resultado novo encontrado nos motores consultados.", "yellow"))
+        print(colored("\n[INFO] No new results found on the queried engines.", "yellow"))
         if LOGGER:
-            LOGGER.info("Nenhum resultado novo")
+            LOGGER.info("No new results")
     if LOGGER:
-        LOGGER.info("Fim da varredura")
+        LOGGER.info("Scan end")
 
 if __name__ == "__main__":
     main()

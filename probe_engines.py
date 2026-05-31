@@ -3,7 +3,7 @@ from termcolor import colored
 import os
 import socket
 
-# Configuração Tor
+# Tor configuration
 
 ENGINES = {
     'Ahmia': 'http://juhanurmihxlp77nkq76byazcldy2hlmovfu2epvl5ankdibsot4csyd.onion/search/?q=test',
@@ -30,19 +30,19 @@ def get_tor_port():
             result = s.connect_ex(('127.0.0.1', port))
             s.close()
             if result == 0:
-                print(colored(f"[INFO] Serviço Tor detectado na porta {port}", "green"))
+                print(colored(f"[INFO] Tor service detected on port {port}", "green"))
                 return port
         except:
             pass
     return None
 
 def probe():
-    print("Iniciando sondagem de motores de busca (Método SOCKS5h)...")
+    print("Starting engine probe (SOCKS5h)...")
     
     tor_port = get_tor_port()
     if not tor_port:
-        print(colored("[CRÍTICO] Não foi possível detectar o serviço Tor (portas 9150 ou 9050 fechadas).", "red"))
-        print(colored("Por favor, abra o Tor Browser e aguarde ele conectar.", "yellow"))
+        print(colored("[CRITICAL] Could not detect Tor (ports 9150 or 9050 closed).", "red"))
+        print(colored("Please start Tor Browser and wait until it connects.", "yellow"))
         return
 
     tor_proxy = f'socks5h://127.0.0.1:{tor_port}'
@@ -58,18 +58,18 @@ def probe():
     }
 
     for name, url in ENGINES.items():
-        print(f"Testando {name}...")
+        print(f"Testing {name}...")
         try:
-            # Timeout aumentado para 60s pois Tor pode ser lento
+            # Increased timeout because Tor can be slow
             r = requests.get(url, headers=headers, proxies=proxies, timeout=60)
             if r.status_code == 200:
-                print(colored(f"  [OK] {name} respondeu. Salvando HTML...", "green"))
+                print(colored(f"  [OK] {name} responded. Saving HTML...", "green"))
                 with open(f'debug_html/{name}.html', 'w', encoding='utf-8', errors='ignore') as f:
                     f.write(r.text)
             else:
-                print(colored(f"  [FALHA] {name} retornou status {r.status_code}", "red"))
+                print(colored(f"  [FAIL] {name} returned status {r.status_code}", "red"))
         except Exception as e:
-            print(colored(f"  [ERRO] {name} inacessível: {e}", "red"))
+            print(colored(f"  [ERROR] {name} unreachable: {e}", "red"))
 
 if __name__ == "__main__":
     probe()
